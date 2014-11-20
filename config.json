@@ -1,0 +1,5 @@
+{
+    "configText": "",
+    "mainURL": "http://utilitysales.esri.com/arcgis/rest/services/telco/Coverage/MapServer/0",
+    "queryFields": "GRIDCODE,ID"
+}
