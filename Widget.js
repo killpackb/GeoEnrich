@@ -43,8 +43,8 @@ define(['dojo/_base/declare',
         Query, MapCSV, SpatialReference) {
         //To create a widget, you need to derive from BaseWidget.
 
-        var map;
-        var CSVObj;
+        var _map;
+        var _CSVObj;
 
         return declare([BaseWidget], {
     
@@ -53,9 +53,9 @@ define(['dojo/_base/declare',
 
             postCreate: function() {
                 this.inherited(arguments);
-                map = this.map;
-                CSVObj = new MapCSV();
-                CSVObj.setParams(this.config,map);
+                _map = this.map;
+                _CSVObj = new MapCSV();
+                _CSVObj.setParams(this.config,_map);
             },
 
             startup: function() {
@@ -70,15 +70,17 @@ define(['dojo/_base/declare',
                     event.preventDefault();
                 });
 
-                on(c, 'drop', this.handleCSVDrop);
+                on(c, 'drop', this._handleCSVDrop);
             },
 
-            handleCSVDrop: function() {
+            _handleCSVDrop: function() {
                 event.preventDefault();
                 var dataTransfer = event.dataTransfer,
                     files = dataTransfer.files;
                 var file = files[0];
-                CSVObj.handleCSV(file);
+                if (file) {
+                _CSVObj.handleCSV(file);
+                }
             },
 
             onOpen: function() {

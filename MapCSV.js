@@ -84,7 +84,7 @@ function(declare, lang, html, arrayUtils,
     },
 
     handleCSV: function(file) {
-        //console.log('Reading CSV: ', file, ', ', file.name, ', ', file.type, ', ', file.size);
+        console.log('Reading CSV: ', file, ', ', file.name, ', ', file.type, ', ', file.size);
         var reader = new FileReader();
         reader.onload = function() {
           _self._processCSVData(reader.result);
@@ -109,8 +109,6 @@ function(declare, lang, html, arrayUtils,
                   var infoTemplate = new InfoTemplate(_self._buildInfoTemplate(popupInfo));
                   var latField, longField;
                   var fieldNames = csvStore.getAttributes(items[0]);
-                  //fieldNames.push(f);
-                  // fieldNames.push('Service');
                   fieldNames = fieldNames.concat(_queryFields);
 
                   arrayUtils.forEach(fieldNames, function(fieldName) {
@@ -166,7 +164,6 @@ function(declare, lang, html, arrayUtils,
                       id: 'csvLayer'
                   });
                   _featureLayer.__popupInfo = popupInfo;
-
                   document.getElementById('loading').style.visibility = 'visible';
                   _self._queryCoverage(_featureLayer);
 
@@ -192,7 +189,6 @@ function(declare, lang, html, arrayUtils,
       },
 
   _generateFeatureCollectionTemplateCSV: function(store, items) {
-
       var featureCollection = {
           'layerDefinition': null,
           'featureSet': {
@@ -218,13 +214,11 @@ function(declare, lang, html, arrayUtils,
       };
 
       var fields = store.getAttributes(items[0]);
-      //fields.push(f);
-      //fields.push('Service');
       fields = fields.concat(_queryFields);
       arrayUtils.forEach(fields, function(field) {
           var value = store.getValue(items[0], field);
           var parsedValue = Number(value);
-          if (isNaN(parsedValue)) { //check first value and see if it is a number
+          if (isNaN(parsedValue)) { 
               featureCollection.layerDefinition.fields.push({
                   'name': field,
                   'alias': field,
@@ -294,7 +288,6 @@ function(declare, lang, html, arrayUtils,
                       };
                   }
               }
-
               return lang.mixin({}, {
                   fieldName: item.name,
                   label: item.alias,
@@ -332,7 +325,6 @@ function(declare, lang, html, arrayUtils,
   },
 
   _zoomToData: function(featureLayer) {
-
     var multipoint = new Multipoint(_map.spatialReference);
     arrayUtils.forEach(featureLayer.graphics, function(graphic) {
         var geometry = graphic.geometry;
@@ -349,7 +341,6 @@ function(declare, lang, html, arrayUtils,
 },
 
 _queryCoverage: function(featureLayer1) {
-
     var c = 0;
     var dataList = [];
     for (var i = 0; i < featureLayer1.graphics.length; i++) {
