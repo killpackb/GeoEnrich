@@ -354,31 +354,18 @@ _queryCoverage: function(featureLayer1) {
     var dataList = [];
     for (var i = 0; i < featureLayer1.graphics.length; i++) {
         _q.geometry = featureLayer1.graphics[i].geometry;
-
         _qT.execute(_q, function getResults(results) {
             if (results.features.length > 0) {
-                var a;
-                var aTmp;
-                a = featureLayer1.graphics[c].attributes;
+                var a = featureLayer1.graphics[c].attributes;
                 for (var i = 0; i < _queryFields.length; i++) {
-                    var val = results.features[0].attributes[_queryFields[i]];
-                    if (!val.isNaN) { 
-                      val = parseFloat(val); 
-                    }
-                    a[_queryFields[i]] = val;
+                   a[_queryFields[i]] = _self._validateItem(results.features[0].attributes[_queryFields[i]]);
                 }
                 featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(10,'#006600');
                 featureLayer1.graphics[c].attributes = a;
-                aTmp = featureLayer1.graphics[c].attributes;
-                delete aTmp.__OBJECTID;
-                dataList.push(aTmp);
-                
+                dataList.push(_self._removeOID(featureLayer1.graphics[c].attributes));  
             } else {
                 featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(5,'#CC3300');
-                a = featureLayer1.graphics[c].attributes;
-                aTmp = a;
-                delete aTmp.__OBJECTID;
-                dataList.push(aTmp);
+                dataList.push(_self._removeOID(featureLayer1.graphics[c].attributes));
             }
             c++;
             if (c >= featureLayer1.graphics.length) {
@@ -387,11 +374,21 @@ _queryCoverage: function(featureLayer1) {
             }
         });
     }
-
 },
 
-_setAttributes: function(){
+_validateItem: function(i){
+//TO DO - Harden this logic
 
+   if (!i.isNaN) { 
+        return parseFloat(i); 
+   }
+   return i;
+},
+
+_removeOID: function(a){
+  var tmp = a;
+  delete tmp.__OBJECTID;
+  return tmp;
 },
 
 _createMarkerSymbol: function(size, color){
@@ -426,24 +423,22 @@ _pushCSV: function(d) {
 _ConvertToCSV: function(objArray) {
     var array = typeof objArray !== 'object' ? JSON.parse(objArray) : objArray;
     var str = '';
-
     for (var i = 0; i < array.length - 1; i++) {
         var line = '';
         for (var index in array[i]) {
-         // console.log(index);
-            if (line !== '') {
-                  line += ',';
-            }
-            line += array[i][index];   
+         if(index.hasOwnProperty(array[i])){           
+           line = (line !== '') ? line += ','
+           : line += array[i][index];  
+          }
       }
         str += line + '\r\n';
     }
-
     return str;
 },
 
 update: function(/*jshint unused: false*/ dependParamValue){
 }
+
 });
   return clazz;
 });
