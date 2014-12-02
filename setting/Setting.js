@@ -14,9 +14,11 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////////
 
-var _fieldInfo;
-var _config;
-var _s;
+var _self;
+var _select;
+var _store;
+var _currentURL;
+var _currentFields;
 
 define([
         'dojo/_base/declare',
@@ -24,66 +26,86 @@ define([
         'jimu/BaseWidgetSetting',
         'dojo/_base/lang',
         'dojo/on',
-        'dijit/form/Select'
+        'jimu/dijit/Message',
+        'dojox/form/CheckedMultiSelect',
+        'dojo/data/ObjectStore',
+        'dojo/store/Memory'
     ],
 
     function(
-        declare,
-        _WidgetsInTemplateMixin,
-        BaseWidgetSetting,
-        lang,
-        on) {
+        declare, _WidgetsInTemplateMixin, BaseWidgetSetting,
+        lang,on, Message, Select, ObjectStore, Memory) {
         return declare([BaseWidgetSetting, _WidgetsInTemplateMixin], {
             baseClass: 'jimu-widget-GeoEnrich-setting',
 
             startup: function() {
+               _self = this;
+
                 this.inherited(arguments);
-                if (!this.config.mainURL) {
-                    this.config.mainURL = '';
+
+                if (!_currentURL) {
+                    this.config.mainURL = _currentURL;  
                 }
+
+                _self.textURL.set('value', _currentURL);
                 this.setConfig(this.config);
 
+                if (!_currentFields) {
+                    this.config.queryFields = _currentFields;
+                }
+
                 this.own(on(this.textURL, 'change',
-                    lang.hitch(this, this.onSelectChange)));
+                    lang.hitch(this, this._onSelectChange)));
                 this.own(on(this.goButton, 'click',
-                    lang.hitch(this, this.onSelectChange)));
-                _s = null;
+                    lang.hitch(this, this._onSelectChange)));
+
+                _store = new Memory({
+                    data: ['Not Set']
+                });
+
+               var os = new ObjectStore({
+                    objectStore: _store
+                });
+  
+                _select = new Select({
+                    id: 'fieldSelect',
+                    store: os,
+                    readOnly: false,
+                    multiple: true,
+                    style: 'visibility:hidden'
+                }, 'fieldList');
+                _select.startup();
+
+                _select.on('change', function() {
+                    _self.queryFields = this.get('value');
+                    _currentFields = this.get('value');
+                    console.log('Setting:' + _self.config.queryFields);
+                    //_self.setConfig(_self.config);
+                });
+
             },
 
             setConfig: function(config) {
                 this.config = config;
-                _config = config;
-                if (config.mainURL) {
-                    this.textURL.set('value', config.mainURL);
-                }
             },
 
-            onSelectChange: function() {
-                if (this.textURL.value) {
-                    this.config.mainUrl = this.textURL.value;
+            getConfig: function() {
+                this.config.mainURL = this.textURL.value;
+                this.config.queryFields = _currentFields;
+                return _self.config;
+            },
 
-                    require(['dojo/dom',
-                            'dojo/on',
-                            'dojo/dom-class',
-                            'dojo/_base/json',
-                            'dojo/_base/array',
-                            'dojo/string',
-                            'esri/request',
-                            'dojo/domReady!'
+            _checkURL: function(url){
+
+                 require(['esri/request',
+                          'dojo/domReady!'
                         ],
-                        function(dom, on, domClass, dojoJson, array, dojoString, esriRequest) {
-
-                            getContent();
-
-                            function getContent() {
-
-                                var url = this.textURL.value;
-
-                                if (url.length === 0) {
-                                    alert('Please enter a URL');
-                                    return;
-                                }
-
+                        function(esriRequest) {
+                            if (url.length === 0) {
+                                _self._URLError('Enter a Valid Service URL');
+                                return;
+                            }
+                            try {
                                 var requestHandle = esriRequest({
                                     'url': url,
                                     'content': {
@@ -91,100 +113,126 @@ define([
                                     },
                                     'callbackParamName': 'callback'
                                 });
-                                requestHandle.then(requestSucceeded, requestFailed);
+
+                                requestHandle.then(_self._requestSucceeded, _self._requestFailed);
+
+                            }catch(e){
+
+                                 _self._URLError('');
                             }
+                });
 
-                            function requestSucceeded(response, io) {
-                                var pad;
-                                pad = dojoString.pad;
+            },
 
-                                if (response.hasOwnProperty('fields')) {
-                                    _fieldInfo = array.map(response.fields, function(f) {
+            _requestFailed: function(error, io) { 
+                console.error(error);                       
+                _self._URLError('');
+            },
 
-                                        if (f.type === 'esriFieldTypeSmallInteger' ||
-                                            f.type === 'esriFieldTypeInteger' ||
-                                            f.type === 'esriFieldTypeSingle' ||
-                                            f.type === 'esriFieldTypeDouble' ||
-                                            f.type === 'esriFieldTypeString' ||
-                                            f.type === 'esriFieldTypeDate') {
-                                            if (f.name || f.alias) {
-                                                return {
-                                                    'id': f.name,
-                                                    'label': f.name
-                                                };
-                                            }
+          _requestSucceeded: function(response, io) {
+                
+                _self.mainUrl = this.textURL.value;
+                _currentURL = this.textURL.value;
+
+                if (response.hasOwnProperty('geometryType')) {
+                    if (response.geometryType !== 'esriGeometryPolygon '){
+                        _self._URLError('Must be a Polygon Feature Service');
+                        return;
+                    }
+                }
+
+                require(['dojo/_base/array',
+                         'dojo/domReady!'
+                        ],
+                        function(array) {
+                            if (response.hasOwnProperty('fields')) {
+                                var fieldInfo = array.map(response.fields, function(f) {
+
+                                    if (f.type === 'esriFieldTypeSmallInteger' ||
+                                        f.type === 'esriFieldTypeInteger' ||
+                                        f.type === 'esriFieldTypeSingle' ||
+                                        f.type === 'esriFieldTypeDouble' ||
+                                        f.type === 'esriFieldTypeString' ||
+                                        f.type === 'esriFieldTypeDate') {
+                                        if (f.name || f.alias) {
+                                            return {
+                                                'id': f.name,
+                                                'label': f.name
+                                            };
                                         }
-
-                                    });
-
-                                    generateFieldsHTML(_fieldInfo);
-
-                                } else {
-                                    dom.byId('fieldArea').innerHTML =
-                                        'No field info found. Please double-check the URL.';
-                                }
-
-                            }
-
-                            function requestFailed(error, io) {
-
-                                domClass.add(dom.byId('fieldArea'), 'failure');
-                                dojoJson.toJsonIndentStr = ' ';
-                                dom.byId('fieldArea').innerHTML = dojoJson.toJson(error, true);
-                            }
-
-                            function generateFieldsHTML(fieldInfo) {
-
-                                var fInfo = [];
-                                var ii = 0;
-                                for (var i = 0; i < fieldInfo.length; i++) {
-                                    if (fieldInfo[i]) {
-                                        fInfo[ii] = fieldInfo[i];
-                                        ii++;
-                                    }
-                                }
-                                // Fix this
-                                fieldInfo = fInfo;
-                                require(['dojox/form/CheckedMultiSelect',
-                                    'dojo/data/ObjectStore',
-                                    'dojo/store/Memory',
-                                    'dojo/_base/window',
-                                    'dojo/dom-construct',
-                                    'dojo/domReady!'
-                                ], function(Select, ObjectStore, Memory, win, domConstruct) {
-
-                                    var store = new Memory({
-                                        data: fieldInfo
-                                    });
-
-                                    var os = new ObjectStore({
-                                        objectStore: store
-                                    });
-
-
-                                    if (_s === null) {
-                                        _s = new Select({
-                                            store: os,
-                                            id: 'field' + String(Math.floor(Math.random() * 600) + 1),
-                                            name: 'fields' + String(Math.floor(Math.random() * 600) + 1),
-                                            multiple: true
-                                        }, 'fields');
-                                        _s.startup();
-
-                                        _s.on('change', function() {
-                                            _config.queryFields = this.get('value');
-                                            console.log('Setting:' + _config.queryFields);
-                                        });
-                                    } else {
-                                        _s.setStore(os);
                                     }
                                 });
+
+                                _self._generateFieldsHTML(fieldInfo);
+
+                            } else {
+                                 _self._URLError('Cannot Retreive Fields.');
                             }
-                        });
-                }
+                });
             },
-            getConfig: function() {
-                return _config;
+
+            _generateFieldsHTML: function(fieldInfo) {
+               
+                var fInfo = [];
+                var ii = 0;
+                for (var i = 0; i < fieldInfo.length; i++) {
+                    if (fieldInfo[i]) {
+                        fInfo[ii] = fieldInfo[i];
+                        ii++;
+                    }
+                }
+
+                _store.data = fInfo;
+
+                var os = new ObjectStore({
+                    objectStore: _store
+                });
+
+                _select.setStore(os);
+
+                if (_currentFields) {
+                     _select.set ('value',_currentFields);
+                }
+
+                require(['dojo','dojo/dom','dojo/dom-style'],
+                      function(dojo,dom,domStyle) {
+                         domStyle.set(dom.byId('fldLabel'), 'visibility', 'visible');
+                         dojo.style(_select.domNode, {visibility:'visible'});
+                });
+            },
+
+             _URLError: function(e) {
+
+                    require(['dojo/dom','dijit','dojo/dom-style','dojo'],
+                      function(dom,dijit,domStyle,dojo) {
+
+                        if (e===''){
+                            e = 'Invalid URL';
+                        }
+                        //replace with Message
+                        var textBox = dijit.byId('textURL');
+                        var oV = textBox.validator;
+                        textBox.validator = function() {return false;};
+                        textBox.validate();  
+                        textBox.validator = oV;
+                        dijit.showTooltip(
+                            e, 
+                            textBox.domNode, 
+                            textBox.get('tooltipPosition'),
+                            !textBox.isLeftToRight()
+                        );
+                         domStyle.set(dom.byId('fldLabel'), 'visibility', 'hidden');
+                         dojo.style(_select.domNode, {visibility:'hidden'});
+
+                    });
+                },
+
+            _onSelectChange: function() {
+
+                if (this.textURL.value) {
+                    _self._checkURL(this.textURL.value);
+                }
             }
+
         });
     });

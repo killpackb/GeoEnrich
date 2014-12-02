@@ -2,10 +2,10 @@
 
 <label >Source URL:</label>
 <input type="text" name="usrURL" value=""
-    data-dojo-type="dijit/form/TextBox" data-dojo-attach-point="textURL" 
-    data-dojo-props="trim:true" id="textURL"  style="width:50%"/>
+    data-dojo-type="dijit.form.ValidationTextBox" data-dojo-attach-point="textURL" 
+    data-dojo-props="trim:true" id="textURL"  style="width:70%" />
   <div class="jimu-btn" data-dojo-attach-point="goButton" type="goButton">Set URL</div>
-  </br></br>
-  Select the fields to use: </br>
- <div id="fields" ></div>
+  </br>
+  <label id="fldLabel" style="visibility:hidden"> Select the fields to use append: </label> </br>
+  <div id="fieldList" class="fieldList-cmbo" ></div>
 </div>
