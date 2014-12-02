@@ -80,7 +80,6 @@ define([
                     _self.queryFields = this.get('value');
                     _currentFields = this.get('value');
                     console.log('Setting:' + _self.config.queryFields);
-                    //_self.setConfig(_self.config);
                 });
 
             },
@@ -135,7 +134,7 @@ define([
                 _currentURL = this.textURL.value;
 
                 if (response.hasOwnProperty('geometryType')) {
-                    if (response.geometryType !== 'esriGeometryPolygon '){
+                    if (response.geometryType !== 'esriGeometryPolygon'){
                         _self._URLError('Must be a Polygon Feature Service');
                         return;
                     }
@@ -166,7 +165,7 @@ define([
                                 _self._generateFieldsHTML(fieldInfo);
 
                             } else {
-                                 _self._URLError('Cannot Retreive Fields.');
+                                 _self._URLError('Cannot Retreive Fields. Requires Polygon Feature Service.');
                             }
                 });
             },
