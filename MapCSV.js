@@ -360,7 +360,7 @@ _queryCoverage: function(featureLayer1) {
             }
             c++;
             if (c >= featureLayer1.graphics.length) {
-                _self._zoomToData(_featureLayer);
+                _self._zoomToData(featureLayer1);
                 _self._pushCSV(dataList);
             }
         });
@@ -378,7 +378,9 @@ _validateItem: function(i){
 
 _removeOID: function(a){
   var tmp = a;
-  delete tmp.__OBJECTID;
+  if (tmp.__OBJECTID){
+    delete tmp.__OBJECTID;
+  }
   return tmp;
 },
 
@@ -392,6 +394,7 @@ _createMarkerSymbol: function(size, color){
 
 
 _pushCSV: function(d) {
+
     document.getElementById('loading').style.visibility = 'hidden';
     var f1;
     for (var i = 0; i < _fFields.length; i++) {
@@ -406,27 +409,30 @@ _pushCSV: function(d) {
     var a = document.createElement('a');
     a.href = 'data:attachment/csv,' + encodedUri;
     a.target = '_blank';
-    a.download = 'GeoEnriched.csv';
+    a.download = 'GeoEnrich.csv';
     document.body.appendChild(a);
     a.click();
 },
 
 _ConvertToCSV: function(objArray) {
+
     var array = typeof objArray !== 'object' ? JSON.parse(objArray) : objArray;
     var str = '';
     for (var i = 0; i < array.length - 1; i++) {
         var line = '';
         for (var index in array[i]) {
-         if(index.hasOwnProperty(array[i])){           
+         if(array[i].hasOwnProperty(index)){           
            line = (line !== '') ? line += ','
-           : line += array[i][index];  
+           : line;
+           line += array[i][index];  
           }
       }
         str += line + '\r\n';
     }
+
     return str;
 },
-
+ 
 update: function(/*jshint unused: false*/ dependParamValue){
 }
 

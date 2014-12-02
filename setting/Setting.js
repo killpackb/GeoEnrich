@@ -79,7 +79,7 @@ define([
                 _select.on('change', function() {
                     _self.queryFields = this.get('value');
                     _currentFields = this.get('value');
-                    console.log('Setting:' + _self.config.queryFields);
+                    //console.log('Setting:' + _self.config.queryFields);
                 });
 
             },
