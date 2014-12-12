@@ -26,6 +26,7 @@ define(['dojo/_base/declare',
   'esri/geometry/Multipoint',
   'esri/InfoTemplate',
   'esri/symbols/SimpleMarkerSymbol',
+  'esri/symbols/PictureMarkerSymbol',
   'esri/graphic', 
   'esri/Color', 
   'esri/geometry/Point',
@@ -37,8 +38,8 @@ define(['dojo/_base/declare',
 ],
 function(declare, lang, html, arrayUtils, 
   CsvStore, base64, FeatureLayer, webMercatorUtils, 
-  Multipoint, InfoTemplate, SimpleMarkerSymbol, Graphic, 
-  Color, Point, QueryTask, Query,
+  Multipoint, InfoTemplate, SimpleMarkerSymbol, PictureMarkerSymbol, 
+  Graphic, Color, Point, QueryTask, Query,
   Deferred, _WidgetBase) {
 
   var _qT;
@@ -343,6 +344,9 @@ function(declare, lang, html, arrayUtils,
 _queryCoverage: function(featureLayer1) {
     var c = 0;
     var dataList = [];
+    var sym1 = new SimpleMarkerSymbol(_config.SymbolIn);
+    var sym2 = new SimpleMarkerSymbol(_config.SymbolOut);
+
     for (var i = 0; i < featureLayer1.graphics.length; i++) {
         _q.geometry = featureLayer1.graphics[i].geometry;
         _qT.execute(_q, function getResults(results) {
@@ -351,17 +355,23 @@ _queryCoverage: function(featureLayer1) {
                 for (var i = 0; i < _queryFields.length; i++) {
                    a[_queryFields[i]] = _self._validateItem(results.features[0].attributes[_queryFields[i]]);
                 }
-                featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(10,'#006600');
+                //featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(10,'#006600');
+                featureLayer1.graphics[c].symbol = sym1;
                 featureLayer1.graphics[c].attributes = a;
                 dataList.push(_self._removeOID(featureLayer1.graphics[c].attributes));  
             } else {
-                featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(5,'#CC3300');
+                //featureLayer1.graphics[c].symbol = _self._createMarkerSymbol(5,'#CC3300');
+                featureLayer1.graphics[c].symbol = sym2;
                 dataList.push(_self._removeOID(featureLayer1.graphics[c].attributes));
             }
             c++;
             if (c >= featureLayer1.graphics.length) {
                 _self._zoomToData(featureLayer1);
+                if (_config.outCSV===true) {
                 _self._pushCSV(dataList);
+                }else{
+                  document.getElementById('loading').style.visibility = 'hidden';
+                }
             }
         });
     }

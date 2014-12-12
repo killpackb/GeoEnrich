@@ -19,6 +19,9 @@ var _select;
 var _store;
 var _currentURL;
 var _currentFields;
+var _checked;
+var _symIn;
+var _symOut;
 
 define([
         'dojo/_base/declare',
@@ -27,14 +30,18 @@ define([
         'dojo/_base/lang',
         'dojo/on',
         'jimu/dijit/Message',
+        'jimu/dijit/SymbolChooser',
         'dojox/form/CheckedMultiSelect',
         'dojo/data/ObjectStore',
-        'dojo/store/Memory'
+        'esri/symbols/SimpleMarkerSymbol',
+        'esri/Color',
+        'dijit'
     ],
 
     function(
         declare, _WidgetsInTemplateMixin, BaseWidgetSetting,
-        lang,on, Message, Select, ObjectStore, Memory) {
+        lang,on, Message, SymbolChooser, Select, ObjectStore, 
+        SimpleMarkerSymbol, Color,dijit) {
         return declare([BaseWidgetSetting, _WidgetsInTemplateMixin], {
             baseClass: 'jimu-widget-GeoEnrich-setting',
 
@@ -44,43 +51,24 @@ define([
                 this.inherited(arguments);
 
                 if (!_currentURL) {
-                    this.config.mainURL = _currentURL;  
+                    this.config.mainURL = _currentURL;
+                }else{
+                    this.textURL.set('value',_currentURL);
                 }
 
-                _self.textURL.set('value', _currentURL);
+                if (!_checked) {
+                    this.chkCSVOut.set('checked',this.config.outCSV);
+                    _checked = this.config.outCSV;
+                }else{
+                    this.chkCSVOut.set('checked',_checked);
+                }
+
+
+
+                this._setListeners();
+                this._setSelect();
+
                 this.setConfig(this.config);
-
-                if (!_currentFields) {
-                    this.config.queryFields = _currentFields;
-                }
-
-                this.own(on(this.textURL, 'change',
-                    lang.hitch(this, this._onSelectChange)));
-                this.own(on(this.goButton, 'click',
-                    lang.hitch(this, this._onSelectChange)));
-
-                _store = new Memory({
-                    data: ['Not Set']
-                });
-
-               var os = new ObjectStore({
-                    objectStore: _store
-                });
-  
-                _select = new Select({
-                    id: 'fieldSelect',
-                    store: os,
-                    readOnly: false,
-                    multiple: true,
-                    style: 'visibility:hidden'
-                }, 'fieldList');
-                _select.startup();
-
-                _select.on('change', function() {
-                    _self.queryFields = this.get('value');
-                    _currentFields = this.get('value');
-                    //console.log('Setting:' + _self.config.queryFields);
-                });
 
             },
 
@@ -91,7 +79,85 @@ define([
             getConfig: function() {
                 this.config.mainURL = this.textURL.value;
                 this.config.queryFields = _currentFields;
+                this.config.outCSV = _checked;
+                this.config.SymbolIn = _symIn;
+                this.config.SymbolOut = _symOut;
                 return _self.config;
+            },
+
+            _setListeners: function(){
+                this.own(on(this.textURL, 'change',
+                    lang.hitch(this, this._onSelectChange)));
+                this.own(on(this.goButton, 'click',
+                    lang.hitch(this, this._onSelectChange)));
+                this.own(on(this.chkCSVOut, 'change',
+                    lang.hitch(this, this._onCSVClick)));
+
+                this.own(on(this.sym1, 'change',
+                lang.hitch(this, this._sym1onChange)));
+
+                this.own(on(this.sym2, 'change',
+                lang.hitch(this, this._sym2onChange)));
+
+                this.config.SymbolIn = this.sym1.getSymbol();
+                this.config.SymbolOut = this.sym2.getSymbol();
+                _symIn = this.sym1.getSymbol().toJson();
+                _symOut = this.sym2.getSymbol().toJson();
+            },
+
+            _createMarkerSymbol: function(size, color){
+              var markerSymbol = new SimpleMarkerSymbol();
+              markerSymbol.setSize(size);
+              markerSymbol.setColor(new Color(color));
+              markerSymbol.style = SimpleMarkerSymbol.STYLE_CIRCLE;
+              return markerSymbol;
+            },
+
+            _sym1onChange:function(s){
+                _symIn = s.toJson();
+                _self.SymbolIn = s.toJson();
+            },
+
+            _sym2onChange:function(s){
+                _symOut = s.toJson();
+                _self.SymbolOut = s.toJson();
+            },
+
+            _onCSVClick: function(){
+                _checked = _self.chkCSVOut.checked;
+                _self.outCSV  = _checked;
+            },
+
+            _setSelect: function(){
+
+                 require(['dojo/data/ObjectStore',
+                            'dojo/store/Memory',
+                            'dojo/domReady!'
+                        ],
+                        function(ObjectStore,Memory) {
+                            _store = new Memory({
+                                data: ['Not Set']
+                            });
+
+                           var os = new ObjectStore({
+                                objectStore: _store
+                            });
+              
+                            _select = new Select({
+                                id: 'fieldSelect',
+                                store: os,
+                                readOnly: false,
+                                multiple: true,
+                                style: 'visibility:hidden'
+                            }, 'fieldList');
+                            _select.startup();
+
+                            _select.on('change', function() {
+                                _self.queryFields = this.get('value');
+                                _currentFields = this.get('value');
+                                //console.log('Setting:' + _self.config.queryFields);
+                            });
+                });
             },
 
             _checkURL: function(url){
@@ -108,7 +174,8 @@ define([
                                 var requestHandle = esriRequest({
                                     'url': url,
                                     'content': {
-                                        'f': 'json'
+                                        'f': 'json',
+                                        timeout: 30000
                                     },
                                     'callbackParamName': 'callback'
                                 });
@@ -196,6 +263,7 @@ define([
                 require(['dojo','dojo/dom','dojo/dom-style'],
                       function(dojo,dom,domStyle) {
                          domStyle.set(dom.byId('fldLabel'), 'visibility', 'visible');
+                         domStyle.set(dom.byId('parent'), 'visibility', 'visible');
                          dojo.style(_select.domNode, {visibility:'visible'});
                 });
             },
@@ -221,6 +289,7 @@ define([
                             !textBox.isLeftToRight()
                         );
                          domStyle.set(dom.byId('fldLabel'), 'visibility', 'hidden');
+                         domStyle.set(dom.byId('parent'), 'visibility', 'hidden');
                          dojo.style(_select.domNode, {visibility:'hidden'});
 
                     });
