@@ -394,14 +394,6 @@ _removeOID: function(a){
   return tmp;
 },
 
-_createMarkerSymbol: function(size, color){
-  var markerSymbol = new SimpleMarkerSymbol();
-  markerSymbol.setSize(size);
-  markerSymbol.setColor(new Color(color));
-  markerSymbol.style = SimpleMarkerSymbol.STYLE_CIRCLE;
-  return markerSymbol;
-},
-
 
 _pushCSV: function(d) {
 
@@ -442,7 +434,15 @@ _ConvertToCSV: function(objArray) {
 
     return str;
 },
- 
+
+_createMarkerSymbol: function(size, color){
+  var markerSymbol = new SimpleMarkerSymbol();
+  markerSymbol.setSize(size);
+  markerSymbol.setColor(new Color(color));
+  markerSymbol.style = SimpleMarkerSymbol.STYLE_CIRCLE;
+  return markerSymbol;
+},
+
 update: function(/*jshint unused: false*/ dependParamValue){
 }
 
