@@ -1,6 +1,6 @@
 
 
-# GeoEnrich - Enrich local tabular .CSV content with defined poygon feataure map services
+# GeoEnrich - Enrich local tabular .CSV content with defined poygon feature map services
 The GeoEnrich widget allows users to drag and drop a local comma delimited file that contains point location data (lat/long) per record and will subsequently attach user selected attribution from a uniquely identified polygon feature service. Each point created by the data within the local CSV will be intersected with the polygon data and in turn the user selected fields and respective data from the feature service will mapped, attached and returned as a new enriched .CSV. 
 
 Usage examples: 
