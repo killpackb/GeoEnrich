@@ -35,15 +35,21 @@ define([
         'dojo/data/ObjectStore',
         'esri/symbols/SimpleMarkerSymbol',
         'esri/Color',
+        'dojo/_base/array',
+        'jimu/LayerInfos/LayerInfos',
+        'dojo/dom',
         'dijit'
     ],
 
     function(
         declare, _WidgetsInTemplateMixin, BaseWidgetSetting,
-        lang,on, Message, SymbolChooser, Select, ObjectStore, 
-        SimpleMarkerSymbol, Color,dijit) {
+        lang,on, Message, SymbolChooser, 
+        Select, ObjectStore, SimpleMarkerSymbol, Color, array, 
+        LayerInfos, dom, dijit) {
         return declare([BaseWidgetSetting, _WidgetsInTemplateMixin], {
             baseClass: 'jimu-widget-GeoEnrich-setting',
+
+            _operLayerInfos: null,
 
             startup: function() {
                _self = this;
@@ -63,14 +69,19 @@ define([
                     this.chkCSVOut.set('checked',_checked);
                 }
 
-
-
                 this._setListeners();
                 this._setSelect();
 
                 this.setConfig(this.config);
 
-            },
+              LayerInfos.getInstance(this.map, this.map.itemInfo)
+              .then(lang.hitch(this, function(operLayerInfos) {
+                this._operLayerInfos = operLayerInfos;
+                this._checkLayers();
+
+              }));
+
+                },
 
             setConfig: function(config) {
                 this.config = config;
@@ -84,6 +95,78 @@ define([
                 this.config.SymbolOut = _symOut;
                 return _self.config;
             },
+
+            _checkLayers: function(){
+
+            array.forEach(_self._operLayerInfos.finalLayerInfos, function(l) {
+ 
+                var isDynamic = (l.originOperLayer.layerType === 'ArcGISMapServiceLayer') ? 1 : 0;
+                if (isDynamic===1) {
+                    array.forEach(l.newSubLayers, function(sl) {
+                        _self._checkURLWebMap(sl.layerObject.url);
+                    });
+                }else {
+                    _self._checkURLWebMap(l.layerObject.url);
+
+                } 
+            });
+
+            },
+
+            _addLayerButton: function (l){
+
+             require(['dijit/form/Button', 'dojo/dom', 'dojo/domReady!'], function(Button, dom){
+                       var b =  new Button({
+                            label: l.title,
+                            url: l.url,
+                            onClick: function(){
+                                console.log(l.url);
+                                _self.textURL.set('value',l.url);
+                            }
+                        });
+                        dom.byId('webMapSel').appendChild(b.domNode);
+                    });
+            },
+
+            _checkURLWebMap: function(url){
+
+                 require(['esri/request',
+                          'dojo/domReady!'
+                        ],
+                        function(esriRequest) {
+                            try {
+                                var requestHandle = esriRequest({
+                                    'url': url,
+                                    'content': {
+                                        'f': 'json',
+                                        timeout: 30000
+                                    },
+                                    'callbackParamName': 'callback'
+                                });
+
+                               requestHandle.then( function(response, io) { 
+                                            
+                                            if (response.hasOwnProperty('geometryType')) {
+                                                if (response.geometryType === 'esriGeometryPolygon'){
+                                                    var o = {
+                                                        title: response.name,
+                                                        url: url
+                                                    };
+                                                    _self._addLayerButton(o);
+                                                }
+                                            }   
+                                        },  function(error, io) { 
+                                                //to do
+        
+                                    });
+
+                            }catch(e){
+                                 console.error(e);
+                                 return 0;
+                            }   
+                });
+            },
+
 
             _setListeners: function(){
                 this.own(on(this.textURL, 'change',
@@ -180,7 +263,7 @@ define([
                                     'callbackParamName': 'callback'
                                 });
 
-                                requestHandle.then(_self._requestSucceeded, _self._requestFailed);
+                                requestHandle.then(_self._requestSucceededUrl, _self._requestFailedUrl);
 
                             }catch(e){
 
@@ -190,12 +273,12 @@ define([
 
             },
 
-            _requestFailed: function(error, io) { 
+            _requestFailedUrl: function(error, io) { 
                 console.error(error);                       
                 _self._URLError('');
             },
 
-          _requestSucceeded: function(response, io) {
+          _requestSucceededUrl: function(response, io) {
                 
                 _self.mainUrl = this.textURL.value;
                 _currentURL = this.textURL.value;
